@@ -4,16 +4,16 @@ include 'includes/config.php';
 include 'includes/header.php';
 
 
-// Get statistics
+
 $news_count = $pdo->query("SELECT COUNT(*) FROM news")->fetchColumn();
 $subscribers_count = $pdo->query("SELECT COUNT(*) FROM newsletter_subscribers")->fetchColumn();
-$messages_count = $pdo->query("SELECT COUNT(*) FROM contact_messages")->fetchColumn();
+$messages_count = $pdo->query("SELECT COUNT(*) FROM contact_messages WHERE is_deleted = 0")->fetchColumn();
 $admins_count = $pdo->query("SELECT COUNT(*) FROM admins")->fetchColumn();
 
-// Get latest news articles
+
 $latest_news = $pdo->query("SELECT * FROM news ORDER BY created_at DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
 
-// Get recent messages
+
 $recent_messages = $pdo->query("SELECT * FROM contact_messages ORDER BY created_at DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
