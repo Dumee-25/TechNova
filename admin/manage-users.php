@@ -2,22 +2,19 @@
 require_once 'includes/config.php';
 require_once 'includes/header.php';
 
-if (!isset($_SESSION['admin_role']) || $_SESSION['admin_role'] !== 'admin') {
+
+$allowed_roles = ['super_admin'];
+
+if (!isset($_SESSION['admin_role']) || !in_array($_SESSION['admin_role'], $allowed_roles)) {
     header("Location: dashboard.php");
     exit();
 }
 
-// Check if user is admin (not editor)
-if ($_SESSION['admin_role'] != 'admin') {
-    header('Location: dashboard.php');
-    exit();
-}
 
-// Handle delete action
 if (isset($_GET['delete'])) {
     $id = $_GET['delete'];
     
-    // Prevent deleting own account
+
     if ($id != $_SESSION['admin_id']) {
         $stmt = $pdo->prepare("DELETE FROM admins WHERE id = ?");
         if ($stmt->execute([$id])) {
@@ -30,7 +27,7 @@ if (isset($_GET['delete'])) {
     }
 }
 
-// Handle add user action
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
@@ -40,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     if (empty($username) || empty($email) || empty($password)) {
         $error = "All fields are required.";
     } else {
-        // Check if username or email already exists
+
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM admins WHERE username = ? OR email = ?");
         $stmt->execute([$username, $email]);
         $count = $stmt->fetchColumn();
@@ -48,10 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
         if ($count > 0) {
             $error = "Username or email already exists.";
         } else {
-            // Hash password
+
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             
-            // Insert new user
+
             $stmt = $pdo->prepare("INSERT INTO admins (username, email, password, role) VALUES (?, ?, ?, ?)");
             if ($stmt->execute([$username, $email, $hashed_password, $role])) {
                 $success = "User added successfully.";
@@ -62,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     }
 }
 
-// Get all admin users
+
 $admins = $pdo->query("SELECT * FROM admins ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -107,6 +104,7 @@ $admins = $pdo->query("SELECT * FROM admins ORDER BY created_at DESC")->fetchAll
                             <select id="role" name="role" class="form-select" required>
                                 <option value="editor">Editor</option>
                                 <option value="admin">Admin</option>
+                                <option value="super_admin">Super Admin</option>
                             </select>
                         </div>
                     </div>
@@ -131,7 +129,11 @@ $admins = $pdo->query("SELECT * FROM admins ORDER BY created_at DESC")->fetchAll
                     <tr>
                         <td><?php echo htmlspecialchars($admin['username']); ?></td>
                         <td><?php echo htmlspecialchars($admin['email']); ?></td>
-                        <td><span class="badge bg-<?php echo $admin['role'] == 'admin' ? 'primary' : 'secondary'; ?>"><?php echo $admin['role']; ?></span></td>
+                        <td>
+                            <span class="badge bg-<?php echo $admin['role'] == 'super_admin' ? 'danger' : ($admin['role'] == 'admin' ? 'primary' : 'secondary'); ?>">
+                                <?php echo $admin['role']; ?>
+                            </span>
+                        </td>
                         <td><?php echo date('M j, Y', strtotime($admin['created_at'])); ?></td>
                         <td>
                             <?php if ($admin['id'] != $_SESSION['admin_id']): ?>
