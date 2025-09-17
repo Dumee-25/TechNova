@@ -3,9 +3,18 @@ $page_title = "Edit News Article";
 include 'includes/config.php';
 include 'includes/header.php';
 
+
 $categories = ['AI', 'Gadgets', 'Programming', 'Startups', 'Cybersecurity'];
 
-// Get article data
+
+$allowed_roles = ['admin', 'editor', 'super_admin'];
+
+if (!isset($_SESSION['admin_role']) || !in_array($_SESSION['admin_role'], $allowed_roles)) {
+    header("Location: dashboard.php");
+    exit();
+}
+
+// Validate article ID
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header('Location: manage-news.php');
     exit();
@@ -21,7 +30,7 @@ if (!$article) {
     exit();
 }
 
-// Process form submission
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title']);
     $content = trim($_POST['content']);
@@ -29,18 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $author = trim($_POST['author']);
     $current_image = $article['image'];
     
-    // Handle image upload
+
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
         $upload_dir = '../public/uploads/';
         $file_extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
         $file_name = uniqid() . '.' . $file_extension;
         $file_path = $upload_dir . $file_name;
         
-        // Check if image file is actual image
+        
         $check = getimagesize($_FILES['image']['tmp_name']);
         if ($check !== false) {
             if (move_uploaded_file($_FILES['image']['tmp_name'], $file_path)) {
-                // Delete old image if it exists and is not default
+
                 if ($current_image && file_exists("../public/uploads/$current_image") && $current_image != 'default.jpg') {
                     unlink("../public/uploads/$current_image");
                 }
@@ -49,19 +58,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Update database
+
     try {
-        $stmt = $pdo->prepare("UPDATE news SET title = ?, content = ?, image = ?, category = ?, author = ?, updated_at = NOW() WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE news 
+                               SET title = ?, content = ?, image = ?, category = ?, author = ?, updated_at = NOW() 
+                               WHERE id = ?");
         $stmt->execute([$title, $content, $current_image, $category, $author, $id]);
         
-        $success = "Article updated successfully!";
+        $success = "✅ Article updated successfully!";
         
         // Refresh article data
         $stmt = $pdo->prepare("SELECT * FROM news WHERE id = ?");
         $stmt->execute([$id]);
         $article = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        $error = "Error updating article: " . $e->getMessage();
+        $error = "⚠️ Error updating article: " . $e->getMessage();
     }
 }
 ?>
@@ -94,7 +105,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="category">Category</label>
             <select id="category" name="category" required>
                 <?php foreach ($categories as $cat): ?>
-                <option value="<?php echo $cat; ?>" <?php echo $article['category'] == $cat ? 'selected' : ''; ?>><?php echo $cat; ?></option>
+                <option value="<?php echo $cat; ?>" <?php echo $article['category'] == $cat ? 'selected' : ''; ?>>
+                    <?php echo $cat; ?>
+                </option>
                 <?php endforeach; ?>
             </select>
         </div>
